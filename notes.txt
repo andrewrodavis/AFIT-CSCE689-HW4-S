@@ -1,0 +1,46 @@
+Task: Provide authentication and encryption for the server && deconflict duplicates && adjust for time skew
+
+Questions:
+- What does skewed times mean?
+
+
+- Antenna receives GPS data from the drone --> Data is fed to a local server --> server calculates drone's performance
+- Servers:
+   - Are geographically separated, only have partial data of each drone's flight path 
+   - May have overlapping coverage, leading to duplicated data of a drone's position
+
+- Simulated Antenna runs on another thread, "receiving" data from the drones
+
+- Items to consider:
+   - System clocks may not be synchronized to the second; Data at different sites may have similar location readings, but be off by a couple seconds
+      -- This is what needs to be deconflicted as duplicate data
+   - Two sicets may received intermittent data, making drone appear to be teleporting if clocks are not synced
+      -- This is what needs to be deconflicted as well
+   - Cannot sync clocks
+   - Access to database must be locked (mutex) between my thread and the simulation (antenna?) thread
+   - I decide naming convention and communication method
+
+- Do not modify:
+   - Antenna code
+   - main.cpp
+   - APIs for DroneDB class with saved drone data; Can modify DronePlotDB but don't break
+
+- Code Requirements:
+   - Replication Server:
+      - encrypt communication using AES shared-key block encryption using "libcrypt++6"
+      - runs on specified IP and port (command-line)
+      - identify new data and replicate to the other two servers (done by Professor)
+      - only connect to other servers when sending info (done by Prof)
+      - disconnect when done (done by Prof)
+   - Each connection:
+      - begin with challenge/response handshake using randomly generated bits
+      - reject connections that fail to properly encrypt bits
+      - *use process pg 514, figure 9.6 of book
+   - >= 20 second delay between replication action for a server; to reduce traffic
+   - dump database info of server at end
+      - use data dump function in DroneDB class
+   - use "diff" to check my solution against the answer
+   - Answer solution:
+      - can be slightly off as long as deviation is same (e.g. always >= 1 second)
+      - can have slight variations in node_id where duplicate entries were found
+   - Can use iterative or concurrent server design; code is mostly iterative
