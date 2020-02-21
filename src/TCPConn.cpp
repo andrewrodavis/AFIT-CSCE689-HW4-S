@@ -13,6 +13,7 @@
 #include <crypto++/rijndael.h>
 #include <crypto++/gcm.h>
 #include <crypto++/aes.h>
+#include <random>
 
 using namespace CryptoPP;
 
@@ -620,5 +621,32 @@ bool TCPConn::isConnected() {
 const char *TCPConn::getIPAddrStr(std::string &buf) {
    _connfd.getIPAddrStr(buf);
    return buf.c_str();
+}
+
+/**
+ * genBytesForVerify - Generates a random "string" of bytes to be send when initial connection is made
+ *
+ * Source: https://en.cppreference.com/w/cpp/numeric/random
+ */
+int TCPConn::genBytesForVerify() {
+    // Setup random generator
+    std::random_device bar;
+    std::default_random_engine foo(bar());
+    std::uniform_int_distribution<int>  uniform_distribution(0, 255);
+
+    // The random number between 0->255
+    int number = uniform_distribution(foo);
+
+   // Assign this._authstr some the number of values of number to be changed later
+   //   By doing this fist, I will get machine-readable only characters. If I don't do this and
+   //       initialize immediately in the following loop, I will get a long string of integers. Is that ok? Which one to go with?
+   for(int i = 0; i < number; i++){
+       this->_authstr = this->_authstr + std::to_string(i);
+   }
+
+   // Convert each position of the string to some random number
+   for(int i = 0; i < number; i++){
+       this->_authstr[i] = uniform_distribution(foo);
+   }
 }
 

@@ -68,6 +68,11 @@ public:
    // Assign outgoing data and sets up the socket to manage the transmission
    void assignOutgoingData(std::vector<uint8_t> &data);
 
+   // Added Functions
+   // Generate random bytes -- But how many bytes?
+   signed int genBytesForVerify();
+
+
 protected:
    // Functions to execute various stages of a connection 
    void sendSID();
@@ -111,7 +116,7 @@ private:
    std::vector<uint8_t> _outputbuf;
 
    CryptoPP::SecByteBlock &_aes_key; // Read from a file, our shared key
-   std::string _authstr;   // remembers the random authorization string sent
+   std::string _authstr = "seed";   // remembers the random authorization string sent.
 
    unsigned int _verbosity;
 
