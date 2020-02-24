@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.10.2)
 project(AFIT-CSCE689-HW4-S)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -17,7 +17,7 @@ add_executable(AFIT-CSCE689-HW4 src/repsvr_main.cpp
         src/ALMgr.cpp           include/ALMgr.h
                                 include/exceptions.h
         )
-add_executable(test
+add_executable(testStuff
         test.cpp)
 
 target_include_directories(AFIT-CSCE689-HW4 PRIVATE src include)

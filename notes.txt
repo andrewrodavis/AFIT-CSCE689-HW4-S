@@ -3,12 +3,38 @@ Task:
 - Identify and implement an election algorithm
 - Identify a technique to detect skew and adjust all drone plots
 
+Running:
+./src/repsvr -p 9999 -t 2.0 -o sv2.txt -v 3 ./data/SingleDroneN1.bin
+
 Questions:
 - What does skewed times mean?
 - Which files to alter?
+- TCPConn::waitForData description says it sends a plaintext random auth string of our own, but this seems out of place
+    Especially since the first line says the authentication is complete, so why would is send another autorization string?
 
 Files to Alter:
-- 
+- TCPConn.cpp/.h
+
+Authentication:
+- Client:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 Antenna receives GPS data from the drone --> Data is fed to a local server --> server calculates drone's performance
