@@ -173,6 +173,7 @@ void TCPConn::handleConnection() {
    try {
       switch (_status) {
 
+         /** Client **/
          // Client: Just connected, send our SID
          // Default
          case s_connecting:
@@ -194,30 +195,39 @@ void TCPConn::handleConnection() {
               c_waitForEB();
               break;
 
-          // Server: Wait for the SID from a newly-connected client, then send our SID
+          // Client: connecting user - replicate data
+          // Default
+          case s_datatx:
+              transmitData();
+              break;
+
+          // Client: Wait for acknowledgement that data sent was received before disconnecting
+          // Default
+          case s_waitack:
+              awaitAck();
+              break;
+
+          /** Server **/
+          // Server: Wait for the SID from a newly-connected client, then send our authentication random bytes
           // Default -- To Do: Modify
           case s_connected:
               waitForSID();
               break;
 
+         // Server: Wait for the encrypted bytes from the client
+          case s_waitForEBString:
+              s_waitForEB();
+              break;
 
-
-         // Client: connecting user - replicate data
-         // Default
-         case s_datatx:
-            transmitData();
-            break;
+         // Server: Wait for the random byte string to be sent
+          case s_waitForRBString:
+              s_waitForRB();
+              break;
 
          // Server: Receive data from the client
          // Default
          case s_datarx:
             waitForData();
-            break;
-   
-         // Client: Wait for acknowledgement that data sent was received before disconnecting
-         // Default
-         case s_waitack:
-            awaitAck();
             break;
          
          // Server: Data received and conn disconnected, but waiting for the data to be retrieved
@@ -243,6 +253,7 @@ void TCPConn::handleConnection() {
  **********************************************************************************************/
 
 void TCPConn::sendSID() {
+//    std::cout << "\n\n----(1) Client: Sending SID----\n\n";
    std::vector<uint8_t> buf(_svr_id.begin(), _svr_id.end());
    wrapCmd(buf, c_sid, c_endsid);
    sendData(buf);
@@ -262,6 +273,7 @@ void TCPConn::waitForSID() {
 
    // If data on the socket, should be our Auth string from our host server
    if (_connfd.hasData()) {
+//       std::cout << "\n\n----(1) Server: Received SID from client; Sending random bytes----\n\n";
       std::vector<uint8_t> buf;
 
       if (!getData(buf))
@@ -291,8 +303,8 @@ void TCPConn::waitForSID() {
         this->wrapCmd(buf, this->c_auth, this->c_endauth);
         sendData(buf);
 
-      // _status = s_waitForEB;
-      _status = s_datarx;
+       this->_status = s_waitForEBString;
+//      _status = s_datarx;
    }
 }
 
@@ -304,9 +316,9 @@ void TCPConn::waitForSID() {
  **********************************************************************************************/
 
 void TCPConn:: transmitData() {
-
    // If data on the socket, should be our Auth string from our host server
    if (_connfd.hasData()) {
+//       std::cout << "\n\n----(5) Client: Sending data----\n\n";
       std::vector<uint8_t> buf;
 
       if (!getData(buf))
@@ -347,6 +359,7 @@ void TCPConn::waitForData() {
 
    // If data on the socket, should be replication data
    if (_connfd.hasData()) {
+//       std::cout << "\n\n----(4) Server: Getting replication data. COMPLETE WOO----\n\n";
       std::vector<uint8_t> buf;
 
       if (!getData(buf))
@@ -387,6 +400,7 @@ void TCPConn::awaitAck() {
 
    // Should have the awk message
    if (_connfd.hasData()) {
+//       std::cout << "\n\n----(6) Client: Awaiting Ack. COMPLETE WOO----\n\n";
       std::vector<uint8_t> buf;
 
       if (!getData(buf))
@@ -663,6 +677,7 @@ const char *TCPConn::getIPAddrStr(std::string &buf) {
  *********************************************************************************************/
 void TCPConn::genBytesForVerify() {
     // Setup random generator
+//    std::cout << "\n\n----Generating random bytes---\n\n";
     std::random_device bar;
     std::default_random_engine foo(bar());
     std::uniform_int_distribution<int>  uniform_distribution(0, 255);
@@ -686,6 +701,7 @@ void TCPConn::genBytesForVerify() {
 void TCPConn::c_waitForRB(){
     // If data on the socket, should be our random byte authorization string from the host server
     if(_connfd.hasData()){
+//        std::cout << "\n\n----(2) Client: Waiting for random bytes from server----\n\n";
         std::vector<uint8_t> buf;
 
         if(!getData(buf)) { return ;}
@@ -699,7 +715,9 @@ void TCPConn::c_waitForRB(){
 
         // Received good string
         // Encrypt and send the string
-        this->sendEncryptedData(buf);
+        this->encryptData(buf);
+        this->wrapCmd(buf, c_auth, c_endauth);
+        this->sendData(buf);
 
         // Status to wait for the SID
         this->_status = this->c_waitForSID;
@@ -707,7 +725,7 @@ void TCPConn::c_waitForRB(){
 }
 
 /**********************************************************************************************
- * c_waitSID() - The client has send the encrypted string to the server for authentication
+ * c_waitSID() - The client has sent the encrypted string to the server for authentication
  *      We are now waiting for the server to authenticate and send their SID back
  *
  * Source: Code from above
@@ -715,6 +733,7 @@ void TCPConn::c_waitForRB(){
  void TCPConn::c_waitSID(){
      // If data on the socket, should be the server's SID
      if(_connfd.hasData()){
+//         std::cout << "\n\n----(3) Client: Bytes good. Sending random bytes to server----\n\n";
          std::vector<uint8_t> buf;
 
          if(!getData(buf)) { return; }
@@ -726,11 +745,17 @@ void TCPConn::c_waitForRB(){
              return;
          }
 
+         std::string node(buf.begin(), buf.end());
+         setNodeID(node.c_str());
+
          // Received an acknowledgement, the SID, from the server
          // Generate and send our random byte string to authenticate them
          this->genBytesForVerify();
-         this->wrapCmd(this->_gennedAuthStr ,c_auth, c_endauth);
-         this->sendData(this->_gennedAuthStr);
+
+         // Send our Random Byte number
+         buf.assign(this->_gennedAuthStr.begin(), this->_gennedAuthStr.end());
+         this->wrapCmd(buf, this->c_auth, this->c_endauth);
+         sendData(buf);
 
          // We now wait for the encrypted data to come back
          this->_status = c_waitForEBString;
@@ -747,6 +772,7 @@ void TCPConn::c_waitForRB(){
 void TCPConn::c_waitForEB() {
     // If data on the socket, it should be the server's enrypted version of our _gennedAuthStr
     if(_connfd.hasData()){
+//        std::cout << "\n\n----(4) Client: Verifying encrypted bytes----\n\n";
         std::vector<uint8_t> buf;
 
         if(!getData(buf)) { return; }
@@ -756,6 +782,31 @@ void TCPConn::c_waitForEB() {
             this->_server_log.writeLog(msg.str().c_str());
             disconnect();
             return;
+        }
+
+        // Check the decrypted string against what we originally sent.
+        this->decryptData(buf);
+        // If it matches, transmit data
+        // If not, disconnect.
+        if(buf == this->_gennedAuthStr){
+//            std::cout << "\n\n\n***Client matched encrypted string correctly***\n\n\n";
+
+            // Send Replication data here
+            // Send the replication data
+            sendData(_outputbuf);
+
+            if (_verbosity >= 3)
+                std::cout << "Successfully authenticated connection with " << getNodeID() <<
+                          " and sending replication data.\n";
+
+            // Wait for their response
+            this->_status = s_waitack;
+
+        }
+        else{
+            // Reset state machine --> Do I need to set the flag to reset? May cause issue
+            this->_status = s_connecting;
+            this->disconnect();
         }
     }
 }
@@ -770,5 +821,70 @@ void TCPConn::c_waitForEB() {
  **********************************************************************************************/
 
 void TCPConn::s_waitForEB(){
+    // If data on the socket, it should be the client's encrypted version of our _gennedAuthStr
+    if(_connfd.hasData()){
+//        std::cout << "\n\n----(2) Server: Received encrypted bytes from client. Verifying----\n\n";
+        std::vector<uint8_t> buf;
 
+        if(!getData(buf)) { return; }
+        if(!getCmdData(buf, c_auth, c_endauth)){
+            std::stringstream msg;
+            msg << "Encrypted string from client is invalid. Cannot authenticate.";
+            this->_server_log.writeLog(msg.str().c_str());
+            disconnect();
+            return;
+        }
+
+        // Check if the decrypted string is what we originally sent
+        // If match, wait for the client's random bytes string
+        // Otherwise, do not connect
+//        std::cout << "Checking the strings\n";
+        this->decryptData(buf);
+        if(buf == this->_gennedAuthStr){
+//            std::cout << "\n\n\n***Server matched encrypted string correctly***\n\n\n";
+
+            // Send our SID for an ack purpose
+            buf.assign(this->_svr_id.begin(), this->_svr_id.end());
+            this->wrapCmd(buf, c_sid, c_endsid);
+            sendData(buf);
+
+            this->_status = s_waitForRBString;
+        }
+        else{
+//            std::cout << "\n\n\n-Server: Strings did not match-\n\n\n";
+            this->_status = s_connected;
+            this->disconnect();
+        }
+    }
 }
+
+/**********************************************************************************************
+ * s_waitForRB() - The server has fully authenticated the client
+ *      Now, we allow the client to authenticate us
+ *      Here, we wait for the client to send us a RB string to encrypt and send back
+ *
+ * Source: Code from above
+ **********************************************************************************************/
+ void TCPConn::s_waitForRB() {
+     // If data on socket, it should be the client's random byte string
+     if(_connfd.hasData()){
+//         std::cout << "\n\n----(3) Server: Waiting for random bytes from client----\n\n";
+         std::vector<uint8_t> buf;
+
+         if(!getData(buf)) { return; }
+         if(!getCmdData(buf, c_auth, c_endauth)){
+             std::stringstream msg;
+             msg << "Random Byte string from client is invalid. Cannot authenticate.";
+             this->_server_log.writeLog(msg.str().c_str());
+             disconnect();
+             return;
+         }
+
+         // Encrypt the string, wrap, send back
+         this->encryptData(buf);
+         this->wrapCmd(buf, c_auth, c_endauth);
+         this->sendData(buf);
+
+         this->_status = s_datarx;
+     }
+ }
