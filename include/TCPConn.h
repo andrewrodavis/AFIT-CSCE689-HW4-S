@@ -16,7 +16,9 @@ public:
    ~TCPConn();
 
    // The current status of the connection
-   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata };
+   enum statustype { s_none, s_connecting, s_connected, s_datatx, s_datarx, s_waitack, s_hasdata,
+                     c_waitForRBString, c_waitForSID, c_sendRBString, c_waitForEBString,
+                     s_waitForEBString, s_sendEBString, s_waitForRBString };
 
    statustype getStatus() { return _status; };
 
@@ -68,18 +70,31 @@ public:
    // Assign outgoing data and sets up the socket to manage the transmission
    void assignOutgoingData(std::vector<uint8_t> &data);
 
-   // Added Functions
-   // Generate random bytes -- But how many bytes?
-   signed int genBytesForVerify();
-
-
 protected:
+    // State Machine Process:
+    // Client sendSID() --> Server waitForSID/sendRB() -->
+    // Client waitForRB/sendEB() --> Server waitForEB/sendSID() -->
+    // Client waitForSID/sendRB() --> Server waitForRB/sendEB() -->
+    // Client waitForEB/transmitData() --> Server waitForData()
+
    // Functions to execute various stages of a connection 
    void sendSID();
    void waitForSID();
    void transmitData();
    void waitForData();
    void awaitAck();
+
+   // Functions added for authentication
+   void s_waitForEB();   // Server: After sending, waits for the encrypted version. Checks. Sends SID if valid
+   void s_waitForRB();   // Server: After client is authenticated, wait for them to authenticate you
+   void s_sendEB();      // Server: Send the encrypted string, can be put above
+
+   void c_waitForRB();   // Client: Waits for the random string from the client. Encrypts. Sends back.
+   void c_waitSID();     // Client: Waits for server to authenticate them and send their SID. Signal to send our string
+   void c_sendRB();      // Client: Sends our own authentication string
+   void c_waitForEB();   // Client: Waits for the server to send encrypted string back. Sends data if correct, disconnects if not.
+
+   void genBytesForVerify();    // Assign random string to send for verify. = RB
 
    // Looks for commands in the data stream
    std::vector<uint8_t>::iterator findCmd(std::vector<uint8_t> &buf,
@@ -116,7 +131,8 @@ private:
    std::vector<uint8_t> _outputbuf;
 
    CryptoPP::SecByteBlock &_aes_key; // Read from a file, our shared key
-   std::string _authstr = "seed";   // remembers the random authorization string sent.
+   std::string _authstr;   // remembers the random authorization string sent.
+   std::vector<uint8_t> _gennedAuthStr;
 
    unsigned int _verbosity;
 
