@@ -5,6 +5,7 @@
 #include <memory>
 #include "QueueMgr.h"
 #include "DronePlotDB.h"
+#include "handleDuplication.h"
 
 /***************************************************************************************
  * ReplServer - class that manages replication between servers. The data is automatically
@@ -32,6 +33,10 @@ public:
    // An adjusted time that accounts for "time_mult", which speeds up the clock. Any
    // attempts to check "simulator time" should use this function
    time_t getAdjustedTime();
+
+   // --- Andrew Davis ---
+   // Creates object that handles duplicate deletion, then does it
+   void handleDuplicates();
 
 private:
 

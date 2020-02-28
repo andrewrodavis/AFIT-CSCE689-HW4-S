@@ -1,6 +1,7 @@
 #include <iostream>
 #include <exception>
 #include "ReplServer.h"
+#include "handleDuplication.h"
 
 const time_t secs_between_repl = 20;
 const unsigned int max_servers = 10;
@@ -205,7 +206,7 @@ void ReplServer::addReplDronePlots(std::vector<uint8_t> &data) {
       dptr += DronePlot::getDataSize();      
    }
    if (_verbosity >= 2)
-      std::cout << "Replicated in " << count << " plots\n";   
+      std::cout << "Replicated in " << count << " plots\n";
 }
 
 
@@ -227,3 +228,18 @@ void ReplServer::addSingleDronePlot(std::vector<uint8_t> &data) {
 void ReplServer::shutdown() {
    _shutdown = true;
 }
+
+/**********************************************************************************************
+ * handleDuplicates() - Creates a "handleDuplication" object
+ *      then calls its delete function
+ *
+ **********************************************************************************************/
+void ReplServer::handleDuplicates() {
+    handleDuplication doYoThang(this->_plotdb);
+    doYoThang.testPrint();
+}
+
+/**********************************************************************************************
+ * election - Just choose lowest server at the beginning from the server list
+ *
+ **********************************************************************************************/

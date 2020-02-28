@@ -3,26 +3,20 @@
 #include <random>
 
 int main(){
-   std::string _authstr;
+    std::vector<uint8_t> _gennedAuthStr;
+        // Setup random generator
+        std::random_device bar;
+        std::default_random_engine foo(bar());
+        std::uniform_int_distribution<int>  uniform_distribution(0, 255);
 
-   std::random_device r;
-   
-   std::default_random_engine el(r());
-   std::uniform_int_distribution<int> uniform_dist(0,255);
-   int mean = uniform_dist(el);
+        // Convert each position of the string to some random number
+        for(int i = 0; i < 255; i++){
+            _gennedAuthStr.emplace_back(uniform_distribution(foo));
+        }
 
-   for(int i = 0; i < mean; i++){
-       _authstr = _authstr + std::to_string(i);
-   }
-    std::cout << "String: " << _authstr << "\n";
-
-
-   for(int i = 0; i < mean; i++){
-       _authstr[i] = uniform_dist(el);
-   }
-
-   std::cout << "Number: " << mean << "\n";
-   std::cout << "String: " << _authstr << "\n";
-
-   return 0;
+        for(auto a : _gennedAuthStr){
+            std::cout << a << "\n";
+        }
+    std::cout << "size: " << _gennedAuthStr.size() << "\n";
+    return 0;
 }
