@@ -96,6 +96,10 @@ public:
    // Return the number of plot points stored
    size_t size() { return _dbdata.size(); };
 
+    // Added: Andrew Davis
+    void lockMutex();
+    void unlockMutex();
+
    // Wipe the database
    void clear();
 

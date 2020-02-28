@@ -12,11 +12,18 @@ class handleDuplication {
 public:
     handleDuplication(DronePlotDB &plotDB);
     ~handleDuplication();
+
+    void findDuplicates();
+    void handleSkew();
     void deleteDuplicates();
+
     void testPrint();
 
 private:
+    std::vector<int> duplicateIndices;
     DronePlotDB &_plotDB;
+    DronePlotDB tempPlotDB;
+    DronePlot tempPlot;
 };
 
 

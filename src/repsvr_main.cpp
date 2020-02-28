@@ -195,7 +195,6 @@ int main(int argc, char *argv[]) {
    // Write the replication database to a CSV file
    std::cout << "Writing results to: " << outfile << "\n";
    db.sortByTime();
-//   repl_server.handleDuplicates();
    db.writeCSVFile(outfile.c_str());
    
    return 0;

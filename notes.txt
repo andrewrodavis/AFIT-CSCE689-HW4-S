@@ -5,6 +5,7 @@ Task:
 
 Running:
 ./src/repsvr -p 9999 -t 2.0 -o sv2.txt -v 3 ./data/SingleDroneN1.bin
+./src/repsvr -p 9998 -t 2.0 -o sv2.txt -v 3 ./data/SingleDroneN3.bin
 
 Questions:
 - What does skewed times mean?

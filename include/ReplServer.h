@@ -37,6 +37,7 @@ public:
    // --- Andrew Davis ---
    // Creates object that handles duplicate deletion, then does it
    void handleDuplicates();
+   void election();
 
 private:
 
@@ -68,6 +69,9 @@ private:
    // Used to bind the server
    std::string _ip_addr;
    unsigned short _port;
+
+   // Added: Andrew Davis
+   std::string serverLeader;
 };
 
 

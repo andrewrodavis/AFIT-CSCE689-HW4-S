@@ -1,5 +1,6 @@
 #include <iostream>
 #include <exception>
+#include <fstream>
 #include "ReplServer.h"
 #include "handleDuplication.h"
 
@@ -39,6 +40,7 @@ ReplServer::ReplServer(DronePlotDB &plotdb, const char *ip_addr, unsigned short 
 
 {
    _start_time = time(NULL) + offset;
+   this->election();
 }
 
 ReplServer::~ReplServer() {
@@ -109,7 +111,10 @@ void ReplServer::replicate() {
 
          // Incoming replication--add it to this server's local database
          addReplDronePlots(data);         
-      }       
+      }
+//      this->_plotdb.lockMutex();
+//      this->handleDuplicates();
+//      this->_plotdb.unlockMutex();
 
       usleep(1000);
    }   
@@ -211,8 +216,9 @@ void ReplServer::addReplDronePlots(std::vector<uint8_t> &data) {
 
 
 /**********************************************************************************************
- * addSingleDronePlot - Takes in binary serialized drone data and adds it to the database. 
+ * addSingleDronePlot - Takes in binary serialized drone data and adds it to the database.
  *
+ *      Modified: Checks for duplicates every time a new plot is added
  **********************************************************************************************/
 
 void ReplServer::addSingleDronePlot(std::vector<uint8_t> &data) {
@@ -222,10 +228,26 @@ void ReplServer::addSingleDronePlot(std::vector<uint8_t> &data) {
 
    _plotdb.addPlot(tmp_plot.drone_id, tmp_plot.node_id, tmp_plot.timestamp, tmp_plot.latitude,
                                                          tmp_plot.longitude);
+
+   //--- Running into issue with not always unlocking.
+   // Perhaps due to multiple threads locking at same time? Dumbed down explanation
+
+   //   std::cout << "\n\nAdding Single Drone Plot\n";
+//   this->_plotdb.lockMutex();
+//   std::cout << "Mutex Locked. Handling Duplicates\n";
+//   this->handleDuplicates();
+//   std::cout << "Duplicates Handled. Unlocking\n";
+//   this->_plotdb.unlockMutex();
+//   std::cout << "\nMutex Unlocked\n";
 }
 
-
+/**********************************************************************************************
+ * shutdown - Does just that
+ *
+ *      Modified: Does one final check for duplicates before shutting down
+ **********************************************************************************************/
 void ReplServer::shutdown() {
+    this->handleDuplicates();
    _shutdown = true;
 }
 
@@ -236,10 +258,48 @@ void ReplServer::shutdown() {
  **********************************************************************************************/
 void ReplServer::handleDuplicates() {
     handleDuplication doYoThang(this->_plotdb);
-    doYoThang.testPrint();
+    doYoThang.findDuplicates();
+    doYoThang.deleteDuplicates();
 }
 
 /**********************************************************************************************
  * election - Just choose lowest server at the beginning from the server list
  *
  **********************************************************************************************/
+ void ReplServer::election() {
+     // Open the server list, sort, find the lowest one, assign as leader
+     std::ifstream f;
+
+     f.open("./servers.txt");
+
+     std::string line;
+     std::string tempStr;
+     std::vector<std::string> serverList;
+     std::vector<int> serverNums;
+
+
+     // Get the server names from the list
+     while(f.good()){
+         getline(f, line, '\n');
+         // Then it is a server name
+         if(line[0] == 'D'){
+             tempStr += line[0];
+             tempStr += line[1];
+             tempStr += line[2];
+             serverList.emplace_back(tempStr);
+             serverNums.push_back(std::atoi(&line[2]));
+             tempStr.erase();
+         }
+     }
+
+     // Check for the highest value
+     int highestServer = -1;
+     for(int i = 0; i < serverNums.size(); i++){
+         if(serverNums[i] > highestServer){
+             highestServer = i;
+         }
+     }
+
+     // Assign the leader as the highest server listed
+     this->serverLeader = (serverList[highestServer]);
+ }

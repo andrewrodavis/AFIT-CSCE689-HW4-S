@@ -499,4 +499,18 @@ void DronePlotDB::clear() {
    _dbdata.clear();
 }
 
+/*****************************************************************************************
+ * lockMutex - Does just that.
+ *      Used in ReplServer.cpp to ensure no read/write conflicts when deconflicting
+ *
+ * unlockMutex - Same
+ *
+ * Author: Andrew Davis
+ *****************************************************************************************/
+void DronePlotDB::lockMutex(){
+    pthread_mutex_lock(&_mutex);
+}
+void DronePlotDB::unlockMutex() {
+    pthread_mutex_unlock(&_mutex);
+}
 

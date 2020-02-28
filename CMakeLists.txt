@@ -15,6 +15,7 @@ add_executable(AFIT-CSCE689-HW4 src/repsvr_main.cpp
         src/DronePlotDB.cpp     include/DronePlotDB.h
         src/AntennaSim.cpp      include/AntennaSim.h
         src/ALMgr.cpp           include/ALMgr.h
+        src/handleDuplication.cpp include/handleDuplication.h
                                 include/exceptions.h
         )
 add_executable(testStuff
